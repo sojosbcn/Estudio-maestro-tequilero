@@ -1,0 +1,8 @@
+{
+  "name": "Guía Maestra del Tequila",
+  "description": "Plataforma avanzada de inteligencia artificial para la producción de tequila, desde el campo hasta el embotellado.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Guía Maestra del Tequila</title>
+    
+    <!-- PWA Meta tags -->
+    <meta name="theme-color" content="#0B0908" />
+    <meta name="description" content="Guía Maestra del Tequila - Inteligencia Artificial Experta" />
+    
+    <!-- Apple Web App capability (standalone mode) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Guía Tequila" />
+    
+    <!-- Mobile Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Service Worker Registration for PWA Installation -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
+            .catch(err => console.error('Error registrando Service Worker:', err));
+        });
+      }
+    </script>
+  </head>
+  <body class="h-full bg-[#0b0908] text-white">
+    <div id="root" class="h-full"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
