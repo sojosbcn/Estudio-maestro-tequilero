@@ -50,6 +50,9 @@ import {
 import { findOfflineResponse, OFFLINE_DB } from './offlineDb';
 import NomSearchCompare from './components/NomSearchCompare';
 import TequilaLogo from './components/TequilaLogo';
+import ClassroomManager from './components/ClassroomManager';
+import { GraduationCap, BarChart3 } from 'lucide-react';
+import RdDashboard from './components/RdDashboard';
 
 
 interface ExpertResponses {
@@ -81,6 +84,7 @@ const DEPARTMENTS = [
   { id: 'rd', name: 'Comité de I+D Creativo', icon: Lightbulb, emoji: '💡', desc: 'Brainstorming y evaluación de viabilidad de ideas' },
   { id: 'reports', name: 'Departamento de Informes', icon: FileText, emoji: '📄', desc: 'Dossiers y reportes ejecutivos automatizados' },
   { id: 'slides', name: 'NotebookLM & Presentaciones', icon: Presentation, emoji: '📊', desc: 'Diapositivas y archivos fuente listos para NotebookLM' },
+  { id: 'classroom', name: 'Aula de Tequila (Classroom)', icon: GraduationCap, emoji: '🏫', desc: 'Integración con Google Classroom para cursos, tareas y materiales' },
 ];
 
 const STAGES = [
@@ -123,7 +127,7 @@ export default function App() {
   const [renameTitleInput, setRenameTitleInput] = useState('');
   
   // Dynamic collapsers to save screen space
-  const [showDepartments, setShowDepartments] = useState(false);
+  const [showDepartments, setShowDepartments] = useState(true);
   const [showStages, setShowStages] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showHeroIntro, setShowHeroIntro] = useState(false);
@@ -136,11 +140,12 @@ export default function App() {
   const isInitialMount = useRef(true);
 
   // --- Start of Departments & R&D / Report Additions ---
-  const [activeDepartment, setActiveDepartment] = useState<'nom' | 'nom_db' | 'rd' | 'reports' | 'slides'>('nom');
+  const [activeDepartment, setActiveDepartment] = useState<'nom' | 'nom_db' | 'rd' | 'reports' | 'slides' | 'classroom'>('nom');
   
   // R&D State management
   const [userIdeaPitch, setUserIdeaPitch] = useState('');
   const [isRdLoading, setIsRdLoading] = useState(false);
+  const [rdSubTab, setRdSubTab] = useState<'committee' | 'dashboard'>('committee');
   const [rdIdeas, setRdIdeas] = useState<any[]>(() => {
     const saved = localStorage.getItem('tequila_rd_ideas');
     return saved ? JSON.parse(saved) : [];
@@ -959,7 +964,7 @@ Dado que está fuera de línea, el Asistente Experto solo puede responder dudas 
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="grid grid-cols-2 md:grid-cols-5 gap-1.5 pt-1.5 border-t border-white/5"
+                className="grid grid-cols-2 md:grid-cols-6 gap-1.5 pt-1.5 border-t border-white/5"
               >
                 {DEPARTMENTS.map((dept) => {
                   const isActive = activeDepartment === dept.id;
@@ -1307,190 +1312,227 @@ Dado que está fuera de línea, el Asistente Experto solo puede responder dudas 
                   </div>
                 </section>
 
-                {/* Pitch Submission Field */}
-                <div className="glass p-6 rounded-3xl border border-white/5 space-y-4">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-amber-secondary">Proponer Hipótesis de Producción</h3>
-                  <textarea
-                    rows={3}
-                    value={userIdeaPitch}
-                    onChange={(e) => setUserIdeaPitch(e.target.value)}
-                    disabled={!isOnline}
-                    placeholder={isOnline ? "Ej. Añejar tequila blanco en barricas de roble húngaro que albergaron vino de hielo dulce, tatemando previamente las piñas con madera de cerezo silvestre..." : "⚠️ Sin conexión. Ingrese a internet para redactar propuestas y compartirlas con el comité."}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-xs md:text-sm text-white focus:outline-none focus:border-amber-primary transition-all placeholder:text-soft-text/40 resize-none leading-relaxed disabled:opacity-40"
-                  />
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="text-[10px] text-soft-text opacity-75">Las ideas se analizan con Alquimia, Marketing y Sustentabilidad Directa.</span>
-                    <button
-                      onClick={() => handleRdGenerate(userIdeaPitch)}
-                      disabled={isRdLoading || !userIdeaPitch.trim() || !isOnline}
-                      className="px-5 py-2.5 rounded-xl bg-linear-to-br from-amber-primary to-amber-tertiary text-black text-xs font-black uppercase tracking-wider hover:brightness-110 transition-all cursor-pointer disabled:opacity-30"
-                    >
-                      {isRdLoading ? 'Analizando...' : !isOnline ? 'Sin Conexión' : 'Enviar Propuesta'}
-                    </button>
-                  </div>
+                {/* Sub-tab Selection */}
+                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 max-w-md">
+                  <button
+                    onClick={() => setRdSubTab('committee')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      rdSubTab === 'committee' 
+                        ? 'bg-amber-primary text-black shadow-lg shadow-amber-primary/10' 
+                        : 'text-muted-text hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Comité de Ideas
+                  </button>
+                  <button
+                    onClick={() => setRdSubTab('dashboard')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      rdSubTab === 'dashboard' 
+                        ? 'bg-amber-primary text-black shadow-lg shadow-amber-primary/10' 
+                        : 'text-muted-text hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    Dashboard de I+D
+                  </button>
                 </div>
 
-                {/* Preset categories spontaneous brainstorming */}
-                <div className="space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-soft-text">Solicitar Ideas Espontáneas del Comité</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {[
-                      { cat: 'Edición Limitada', desc: 'Botellas de colección y cosechas únicas', emoji: '💎' },
-                      { cat: 'Concepto de Venta', desc: 'Modelos disruptivos e interactivos', emoji: '📣' },
-                      { cat: 'Innovación Química/Destilación', desc: 'Procesos atípicos y fusiones', emoji: '⚗️' }
-                    ].map((item, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleRdGenerate(undefined, item.cat)}
-                        disabled={isRdLoading || !isOnline}
-                        className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-amber-primary/45 hover:bg-amber-primary/[0.02] text-left transition-all duration-300 cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                {rdSubTab === 'committee' ? (
+                  <div className="space-y-6">
+                    {/* Pitch Submission Field */}
+                    <div className="glass p-6 rounded-3xl border border-white/5 space-y-4">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-amber-secondary">Proponer Hipótesis de Producción</h3>
+                      <textarea
+                        rows={3}
+                        value={userIdeaPitch}
+                        onChange={(e) => setUserIdeaPitch(e.target.value)}
+                        disabled={!isOnline}
+                        placeholder={isOnline ? "Ej. Añejar tequila blanco en barricas de roble húngaro que albergaron vino de hielo dulce, tatemando previamente las piñas con madera de cerezo silvestre..." : "⚠️ Sin conexión. Ingrese a internet para redactar propuestas y compartirlas con el comité."}
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-xs md:text-sm text-white focus:outline-none focus:border-amber-primary transition-all placeholder:text-soft-text/40 resize-none leading-relaxed disabled:opacity-40"
+                      />
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <span className="text-[10px] text-soft-text opacity-75">Las ideas se analizan con Alquimia, Marketing y Sustentabilidad Directa.</span>
+                        <button
+                          onClick={() => handleRdGenerate(userIdeaPitch)}
+                          disabled={isRdLoading || !userIdeaPitch.trim() || !isOnline}
+                          className="px-5 py-2.5 rounded-xl bg-linear-to-br from-amber-primary to-amber-tertiary text-black text-xs font-black uppercase tracking-wider hover:brightness-110 transition-all cursor-pointer disabled:opacity-30"
+                        >
+                          {isRdLoading ? 'Analizando...' : !isOnline ? 'Sin Conexión' : 'Enviar Propuesta'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Preset categories spontaneous brainstorming */}
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-soft-text">Solicitar Ideas Espontáneas del Comité</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {[
+                          { cat: 'Edición Limitada', desc: 'Botellas de colección y cosechas únicas', emoji: '💎' },
+                          { cat: 'Concepto de Venta', desc: 'Modelos disruptivos e interactivos', emoji: '📣' },
+                          { cat: 'Innovación Química/Destilación', desc: 'Procesos atípicos y fusiones', emoji: '⚗️' }
+                        ].map((item, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleRdGenerate(undefined, item.cat)}
+                            disabled={isRdLoading || !isOnline}
+                            className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-amber-primary/45 hover:bg-amber-primary/[0.02] text-left transition-all duration-300 cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                          >
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-lg">{item.emoji}</span>
+                              <span className="text-[8px] font-black uppercase tracking-widest text-amber-secondary bg-amber-secondary/5 px-2 py-0.5 rounded-full">Solicitar</span>
+                            </div>
+                            <h4 className="text-xs font-bold text-white group-hover:text-amber-primary transition-colors">{item.cat}</h4>
+                            <p className="text-[10px] text-muted-text mt-0.5 opacity-80">{item.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Loading state for R&D */}
+                    {isRdLoading && (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="p-8 rounded-3xl glass border border-amber-primary/20 text-center space-y-4"
                       >
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-lg">{item.emoji}</span>
-                          <span className="text-[8px] font-black uppercase tracking-widest text-amber-secondary bg-amber-secondary/5 px-2 py-0.5 rounded-full">Solicitar</span>
+                        <div className="relative w-12 h-12 mx-auto">
+                          <div className="absolute inset-0 rounded-full border-2 border-amber-primary/20" />
+                          <div className="absolute inset-0 rounded-full border-2 border-t-amber-primary animate-spin" />
                         </div>
-                        <h4 className="text-xs font-bold text-white group-hover:text-amber-primary transition-colors">{item.cat}</h4>
-                        <p className="text-[10px] text-muted-text mt-0.5 opacity-80">{item.desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Loading state for R&D */}
-                {isRdLoading && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="p-8 rounded-3xl glass border border-amber-primary/20 text-center space-y-4"
-                  >
-                    <div className="relative w-12 h-12 mx-auto">
-                      <div className="absolute inset-0 rounded-full border-2 border-amber-primary/20" />
-                      <div className="absolute inset-0 rounded-full border-2 border-t-amber-primary animate-spin" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-black uppercase tracking-widest text-amber-primary">Comité Deliberando</p>
-                      <p className="text-[11px] text-muted-text animate-pulse">
-                        El Alquimista afina la fermentación, Sofía delinea el empaque y Mateo calcula costos...
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Ideas selector history in-page */}
-                {rdIdeas.length > 0 && !isRdLoading && (
-                  <div className="flex gap-2 items-center overflow-x-auto pb-1 scrollbar-none">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-soft-text shrink-0 mr-1">Conceptos en sesión:</span>
-                    {rdIdeas.map((idea, idx) => {
-                      const isSel = selectedRdIdea?.ideaTitle === idea.ideaTitle;
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedRdIdea(idea)}
-                          className={`px-3 py-1.5 rounded-xl text-[10px] font-extrabold whitespace-nowrap transition-all border ${
-                            isSel 
-                            ? 'bg-amber-primary/10 border-amber-primary text-white font-black' 
-                            : 'bg-white/5 border-white/5 text-muted-text hover:bg-white/10'
-                          }`}
-                        >
-                          🍾 {idea.ideaTitle}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Showing evaluated active idea */}
-                {selectedRdIdea && !isRdLoading && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-6"
-                  >
-                    {/* Main concept board */}
-                    <div className="p-6 rounded-[2rem] border border-amber-secondary/20 bg-linear-to-br from-black/80 via-black/40 to-transparent shadow-xl">
-                      <div className="flex justify-between items-start gap-3 mb-2">
-                        <span className="px-2.5 py-0.5 rounded-full bg-amber-primary/15 border border-amber-primary/30 text-[9px] font-black uppercase tracking-wider text-amber-secondary">
-                          {selectedRdIdea.category}
-                        </span>
-                        <span className="text-[9px] font-bold text-soft-text uppercase">Concepto I+D</span>
-                      </div>
-                      <h3 className="text-2xl font-black text-white tracking-widest font-display mb-1">{selectedRdIdea.ideaTitle}</h3>
-                      <p className="text-xs italic text-soft-text leading-relaxed border-l-2 border-amber-primary/30 pl-3">{selectedRdIdea.concept}</p>
-                      
-                      {/* Specialists opinions */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                        <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/20">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 flex items-center gap-1.5">
-                            <span>⚗️</span> Xavier "El Alquimista"
-                          </h4>
-                          <p className="text-[11px] leading-relaxed text-slate-300">{selectedRdIdea.specialists.alchemist}</p>
-                        </div>
-
-                        <div className="p-4 rounded-xl bg-orange-950/20 border border-amber-500/20">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-1 flex items-center gap-1.5">
-                            <span>🎨</span> Sofía "La Conceptual"
-                          </h4>
-                          <p className="text-[11px] leading-relaxed text-slate-300">{selectedRdIdea.specialists.conceptual}</p>
-                        </div>
-
-                        <div className="p-4 rounded-xl bg-blue-950/20 border border-blue-500/20">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1 flex items-center gap-1.5">
-                            <span>♻️</span> Mateo "El Visionario"
-                          </h4>
-                          <p className="text-[11px] leading-relaxed text-slate-300">{selectedRdIdea.specialists.visionary}</p>
-                        </div>
-                      </div>
-
-                      {/* Score dials */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/5">
                         <div className="space-y-1">
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-soft-text">
-                            <span>Viabilidad Técnica</span>
-                            <span>{selectedRdIdea.feasibilityScore.technical}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${selectedRdIdea.feasibilityScore.technical}%` }} />
-                          </div>
+                          <p className="text-xs font-black uppercase tracking-widest text-amber-primary">Comité Deliberando</p>
+                          <p className="text-[11px] text-muted-text animate-pulse">
+                            El Alquimista afina la fermentación, Sofía delinea el empaque y Mateo calcula costos...
+                          </p>
                         </div>
+                      </motion.div>
+                    )}
 
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-soft-text">
-                            <span>Atracción Comercial</span>
-                            <span>{selectedRdIdea.feasibilityScore.commercial}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${selectedRdIdea.feasibilityScore.commercial}%` }} />
-                          </div>
-                        </div>
-
-                        <div className="flex justify-between items-center p-2 rounded-xl bg-white/5 border border-white/5 px-4">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-soft-text">Costo Estimado</span>
-                          <span className="text-xs font-black text-amber-primary px-2.5 py-0.5 rounded-full bg-amber-primary/10 tracking-widest">{selectedRdIdea.feasibilityScore.cost}</span>
-                        </div>
+                    {/* Ideas selector history in-page */}
+                    {rdIdeas.length > 0 && !isRdLoading && (
+                      <div className="flex gap-2 items-center overflow-x-auto pb-1 scrollbar-none">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-soft-text shrink-0 mr-1">Conceptos en sesión:</span>
+                        {rdIdeas.map((idea, idx) => {
+                          const isSel = selectedRdIdea?.ideaTitle === idea.ideaTitle;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => setSelectedRdIdea(idea)}
+                              className={`px-3 py-1.5 rounded-xl text-[10px] font-extrabold whitespace-nowrap transition-all border ${
+                                isSel 
+                                ? 'bg-amber-primary/10 border-amber-primary text-white font-black' 
+                                : 'bg-white/5 border-white/5 text-muted-text hover:bg-white/10'
+                              }`}
+                            >
+                              🍾 {idea.ideaTitle}
+                            </button>
+                          );
+                        })}
                       </div>
+                    )}
 
-                      {/* Collective verdict */}
-                      <div className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-amber-primary/10 text-amber-primary flex items-center justify-center font-black shrink-0">🤝</div>
-                        <div>
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-secondary">Veredicto Colectivo del Comité</h4>
-                          <p className="text-xs text-muted-text mt-0.5 italic">{selectedRdIdea.verdict}</p>
+                    {/* Showing evaluated active idea */}
+                    {selectedRdIdea && !isRdLoading && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-6"
+                      >
+                        {/* Main concept board */}
+                        <div className="p-6 rounded-[2rem] border border-amber-secondary/20 bg-linear-to-br from-black/80 via-black/40 to-transparent shadow-xl">
+                          <div className="flex justify-between items-start gap-3 mb-2">
+                            <span className="px-2.5 py-0.5 rounded-full bg-amber-primary/15 border border-amber-primary/30 text-[9px] font-black uppercase tracking-wider text-amber-secondary">
+                              {selectedRdIdea.category}
+                            </span>
+                            <span className="text-[9px] font-bold text-soft-text uppercase">Concepto I+D</span>
+                          </div>
+                          <h3 className="text-2xl font-black text-white tracking-widest font-display mb-1">{selectedRdIdea.ideaTitle}</h3>
+                          <p className="text-xs italic text-soft-text leading-relaxed border-l-2 border-amber-primary/30 pl-3">{selectedRdIdea.concept}</p>
+                          
+                          {/* Specialists opinions */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                            <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/20">
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 flex items-center gap-1.5">
+                                <span>⚗️</span> Xavier "El Alquimista"
+                              </h4>
+                              <p className="text-[11px] leading-relaxed text-slate-300">{selectedRdIdea.specialists.alchemist}</p>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-orange-950/20 border border-amber-500/20">
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-1 flex items-center gap-1.5">
+                                <span>🎨</span> Sofía "La Conceptual"
+                              </h4>
+                              <p className="text-[11px] leading-relaxed text-slate-300">{selectedRdIdea.specialists.conceptual}</p>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-blue-950/20 border border-blue-500/20">
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1 flex items-center gap-1.5">
+                                <span>♻️</span> Mateo "El Visionario"
+                              </h4>
+                              <p className="text-[11px] leading-relaxed text-slate-300">{selectedRdIdea.specialists.visionary}</p>
+                            </div>
+                          </div>
+
+                          {/* Score dials */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/5">
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-soft-text">
+                                <span>Viabilidad Técnica</span>
+                                <span>{selectedRdIdea.feasibilityScore.technical}%</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${selectedRdIdea.feasibilityScore.technical}%` }} />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-soft-text">
+                                <span>Atracción Comercial</span>
+                                <span>{selectedRdIdea.feasibilityScore.commercial}%</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-amber-500 rounded-full" style={{ width: `${selectedRdIdea.feasibilityScore.commercial}%` }} />
+                              </div>
+                            </div>
+
+                            <div className="flex justify-between items-center p-2 rounded-xl bg-white/5 border border-white/5 px-4">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-soft-text">Costo Estimado</span>
+                              <span className="text-xs font-black text-amber-primary px-2.5 py-0.5 rounded-full bg-amber-primary/10 tracking-widest">{selectedRdIdea.feasibilityScore.cost}</span>
+                            </div>
+                          </div>
+
+                          {/* Collective verdict */}
+                          <div className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-full bg-amber-primary/10 text-amber-primary flex items-center justify-center font-black shrink-0">🤝</div>
+                            <div>
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-secondary">Veredicto Colectivo del Comité</h4>
+                              <p className="text-xs text-muted-text mt-0.5 italic">{selectedRdIdea.verdict}</p>
+                            </div>
+                          </div>
+
+                          {/* Golden Commission CTA Trigger */}
+                          <div className="mt-8 text-center">
+                            <button
+                              onClick={() => handleCommissionReport(selectedRdIdea)}
+                              disabled={!isOnline}
+                              className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-linear-to-br from-amber-primary via-amber-secondary to-amber-tertiary text-black font-black text-xs md:text-sm uppercase tracking-widest shadow-lg hover:shadow-amber-primary/20 brightness-110 hover:-translate-y-0.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <FileText className="w-4 h-4" /> {isOnline ? 'Redactar Informe Profesional e Diapositivas' : 'Redacción Suspendida (Requiere Internet)'}
+                            </button>
+                          </div>
+
                         </div>
-                      </div>
-
-                      {/* Golden Commission CTA Trigger */}
-                      <div className="mt-8 text-center">
-                        <button
-                          onClick={() => handleCommissionReport(selectedRdIdea)}
-                          disabled={!isOnline}
-                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-linear-to-br from-amber-primary via-amber-secondary to-amber-tertiary text-black font-black text-xs md:text-sm uppercase tracking-widest shadow-lg hover:shadow-amber-primary/20 brightness-110 hover:-translate-y-0.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <FileText className="w-4 h-4" /> {isOnline ? 'Redactar Informe Profesional e Diapositivas' : 'Redacción Suspendida (Requiere Internet)'}
-                        </button>
-                      </div>
-
-                    </div>
-                  </motion.div>
+                      </motion.div>
+                    )}
+                  </div>
+                ) : (
+                  <RdDashboard 
+                    rdIdeas={rdIdeas} 
+                    setRdIdeas={setRdIdeas} 
+                    setSelectedRdIdea={setSelectedRdIdea} 
+                    onNavigateToIdea={() => setRdSubTab('committee')} 
+                  />
                 )}
               </div>
             )}
@@ -1804,6 +1846,13 @@ Dado que está fuera de línea, el Asistente Experto solo puede responder dudas 
             {activeDepartment === 'nom_db' && (
               <div className="animate-fade-in">
                 <NomSearchCompare isOnline={isOnline} />
+              </div>
+            )}
+
+            {/* 6. GOOGLE CLASSROOM ACADEMY INTEGRATION */}
+            {activeDepartment === 'classroom' && (
+              <div className="animate-fade-in">
+                <ClassroomManager />
               </div>
             )}
 

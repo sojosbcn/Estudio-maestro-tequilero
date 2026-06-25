@@ -21,6 +21,54 @@ async function startServer() {
     }
   });
 
+  // Helper function to call Gemini API with automatic exponential backoff retry and model fallback for high-demand errors (503)
+  async function generateWithRetry(options: any, maxRetries = 5, baseDelayMs = 1000) {
+    let attempt = 0;
+    const initialModel = options.model || "gemini-2.5-flash";
+    
+    // Cycle through stable high-capacity models to bypass transient capacity issues
+    const modelAttempts = [
+      initialModel,
+      "gemini-2.5-flash",
+      "gemini-flash-latest",
+      "gemini-3.1-flash-lite",
+      "gemini-3.5-flash"
+    ];
+    const uniqueModelAttempts = Array.from(new Set(modelAttempts));
+
+    while (true) {
+      const currentModel = uniqueModelAttempts[Math.min(attempt, uniqueModelAttempts.length - 1)];
+      try {
+        const callOptions = { ...options, model: currentModel };
+        console.log(`[Gemini API] Sending request to model: ${currentModel} (Attempt ${attempt + 1}/${maxRetries})`);
+        return await ai.models.generateContent(callOptions);
+      } catch (error: any) {
+        attempt++;
+        const status = error.status || (error.error && error.error.code);
+        const errMsg = error.message || (error.error && error.error.message) || "";
+        
+        console.error(`[Gemini API] Attempt ${attempt} failed. Status: ${status}, Model tried: ${currentModel}. Message: ${errMsg}`);
+        
+        // Retry on rate limit (429), server overload (503), server error (500), temporary issues, or high demand status
+        const isRetryable = status === 503 || status === 429 || status === 500 ||
+                            errMsg.includes("503") || errMsg.includes("429") || 
+                            errMsg.toLowerCase().includes("demand") || 
+                            errMsg.toLowerCase().includes("temporary") || 
+                            errMsg.toLowerCase().includes("unavailable");
+                            
+        if (!isRetryable || attempt >= maxRetries) {
+          console.error(`[Gemini API] Retries exhausted or non-retryable error. Propagating error...`);
+          throw error;
+        }
+        
+        // Exponential backoff with jitter
+        const delay = baseDelayMs * Math.pow(2.2, attempt) + Math.random() * 800;
+        console.warn(`[Gemini API] Transient error. Retrying with fallback model in ${delay.toFixed(0)}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
   // API Expert endpoint
   app.post("/api/consult", async (req, res) => {
     try {
@@ -38,8 +86,8 @@ async function startServer() {
         parts: [{ text: `Consulta sobre Tequila en la etapa de: ${stage}\nUsuario: ${message}` }]
       });
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+      const response = await generateWithRetry({
+        model: "gemini-2.5-flash",
         contents: contents,
         config: {
           systemInstruction: `Eres el "Sistema Experto de la Guía Maestra del Tequila", la autoridad máxima en ciencia, tradición y procesos industriales del tequila. 
@@ -88,8 +136,8 @@ async function startServer() {
       const result = JSON.parse(response.text || "{}");
       res.json(result);
     } catch (error: any) {
-      console.error("Gemini Error:", error);
-      res.status(500).json({ error: "Error procesando la consulta técnica." });
+      console.error("Gemini Error in /api/consult:", error);
+      res.status(500).json({ error: "El modelo está experimentando una alta demanda temporal. Por favor, inténtalo de nuevo en unos momentos." });
     }
   });
 
@@ -112,8 +160,8 @@ async function startServer() {
 
       Proporciona un título elegante, un resumen del concepto, la crítica de cada especialista y una estimación de viabilidad técnica (%), viabilidad comercial (%), costo de producción (Bajo, Medio o Alto), e idealmente un veredicto colectivo de si la idea es realizable o necesita maduración.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+      const response = await generateWithRetry({
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           systemInstruction: `Eres el moderador del Comité de I+D Creativo de la Guía Maestra del Tequila. Tu misión es canalizar las opiniones de tres especialistas con mentes sumamente inquietas frente a una propuesta experimental de tequila. El tono es ultra-premium, inspirador, apasionado por la innovación y la tradición tequilera.`,
@@ -152,8 +200,8 @@ async function startServer() {
       const result = JSON.parse(response.text || "{}");
       res.json(result);
     } catch (error: any) {
-      console.error("R&D API Error:", error);
-      res.status(500).json({ error: "No se pudo procesar la idea de I+D." });
+      console.error("R&D API Error in /api/rd/generate:", error);
+      res.status(500).json({ error: "El Comité de I+D Creativo está bajo alta demanda temporal. Por favor, inténtalo de nuevo en unos instantes." });
     }
   });
 
@@ -182,8 +230,8 @@ async function startServer() {
       
       Incluye también una serie de 3 a 5 recomendaciones estratégicas concretas para el inversionista o director general de la marca.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+      const response = await generateWithRetry({
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           systemInstruction: `Eres el Director del Departamento de Informes Técnicos de la Alianza Tequilera. Redactas informes de nivel directivo y consultoría ejecutiva, con un rigor técnico intachable alineado con la NOM-006-SCFI y un análisis de negocio estratégico premium.`,
@@ -219,8 +267,8 @@ async function startServer() {
       const result = JSON.parse(response.text || "{}");
       res.json(result);
     } catch (error: any) {
-      console.error("Reports API Error:", error);
-      res.status(500).json({ error: "No se pudo generar el informe profesional." });
+      console.error("Reports API Error in /api/reports/generate:", error);
+      res.status(500).json({ error: "El Departamento de Informes está bajo alta demanda temporal. Por favor, vuelve a intentarlo pronto." });
     }
   });
 
@@ -246,8 +294,8 @@ async function startServer() {
       
       Para cada diapositiva proporciona: un título directo, un subtítulo contextual, 3 viñetas concisas con datos de alto impacto, y un consejo visual (visualTip) sobre qué tipo de gráfico, animación o imagen sugerida colocar en esa pantalla para mayor elegancia.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+      const response = await generateWithRetry({
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           systemInstruction: `Eres un diseñador de discursos ejecutivos y consultor estratégico. Creas presentaciones limpias, de alto impacto, donde cada frase contiene datos precisos y valor estratégico sin palabrería vacía.`,
@@ -282,8 +330,8 @@ async function startServer() {
       const result = JSON.parse(response.text || "{}");
       res.json(result);
     } catch (error: any) {
-      console.error("Presentation API Error:", error);
-      res.status(500).json({ error: "No se pudo generar el deck de diapositivas." });
+      console.error("Presentation API Error in /api/presentation/generate:", error);
+      res.status(500).json({ error: "No se pudo generar el deck de diapositivas debido a una alta demanda temporal. Por favor, vuelve a intentarlo en breve." });
     }
   });
 
